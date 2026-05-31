@@ -1,8 +1,10 @@
 {
   "name": "pdf-service",
   "version": "1.0.0",
+  "type": "commonjs",
   "description": "HTML to PDF generation microservice",
   "main": "src/PdfModule.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node src/PdfModule.js",
     "dev": "node --watch src/PdfModule.js"

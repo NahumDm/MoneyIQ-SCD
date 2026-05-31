@@ -1,4 +1,10 @@
+import os
+from pathlib import Path
+
 import uvicorn
+
+# Ensure .env in expense-service/ is loaded regardless of cwd
+os.chdir(Path(__file__).resolve().parent)
 
 from src.ExpenseModule import app, settings
 

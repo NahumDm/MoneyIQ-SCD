@@ -1,8 +1,10 @@
 {
   "name": "integration-layer",
   "version": "1.0.0",
+  "type": "commonjs",
   "description": "API gateway / orchestration layer for Personal Expense Management System",
   "main": "dist/index.js",
+  "type": "commonjs",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",

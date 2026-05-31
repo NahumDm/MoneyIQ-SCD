@@ -1,10 +1,12 @@
+package auth;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -23,7 +25,11 @@ import java.util.Map;
  * methods. Main adapts HTTP requests (JSON body, headers, status codes) into
  * facade calls and adapts facade responses back into HTTP responses.
  */
-@SpringBootApplication
+@SpringBootApplication(
+    scanBasePackages = "auth",
+    exclude = DataSourceAutoConfiguration.class
+)
+@EnableMongoRepositories(basePackageClasses = UserRepository.class)
 @RestController
 @RestControllerAdvice
 public class Main {
@@ -36,11 +42,6 @@ public class Main {
 
     public static void main(String[] args) {
         SpringApplication.run(Main.class, args);
-    }
-
-    @Bean
-    PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 
     @GetMapping("/health")

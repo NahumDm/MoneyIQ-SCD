@@ -116,7 +116,7 @@ class PdfModule {
   }
 }
 
-const module = new PdfModule();
-module.start();
+const pdfApp = new PdfModule();
+pdfApp.start();
 
 module.exports = { PdfModule, PdfRenderer, PuppeteerPdfRenderer, PdfRendererFactory };

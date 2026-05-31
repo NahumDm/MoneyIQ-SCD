@@ -1,3 +1,5 @@
+package auth;
+
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
