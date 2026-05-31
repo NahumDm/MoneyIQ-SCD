@@ -1,0 +1,14 @@
+{
+  "name": "pdf-service",
+  "version": "1.0.0",
+  "description": "HTML to PDF generation microservice",
+  "main": "src/PdfModule.js",
+  "scripts": {
+    "start": "node src/PdfModule.js",
+    "dev": "node --watch src/PdfModule.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "puppeteer": "^22.10.0"
+  }
+}

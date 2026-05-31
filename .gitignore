@@ -1,0 +1,100 @@
+# =============================================================================
+# Dependencies & build output
+# =============================================================================
+node_modules/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+venv/
+target/
+.tools/
+*.egg-info/
+.mvn/wrapper/maven-wrapper.jar
+
+# =============================================================================
+# Secrets & credentials (NEVER commit)
+# =============================================================================
+.env
+.env.*
+!.env.example
+*.env.local
+*.env.production
+*.env.development
+.envrc
+
+# Spring / Java local overrides (may contain passwords)
+**/application-local.properties
+**/application-secret.properties
+**/application-prod.properties
+**/secrets.properties
+
+# Generic secret files
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.truststore
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.credentials
+credentials.json
+service-account*.json
+google-services.json
+firebase-adminsdk*.json
+
+# Auth tokens & API keys
+*.token
+*.apikey
+.npmrc
+.pypirc
+
+# =============================================================================
+# Logs & runtime data
+# =============================================================================
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database dumps (may contain user data)
+*.dump
+*.bson
+dump/
+data/db/
+
+# =============================================================================
+# IDE & OS
+# =============================================================================
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =============================================================================
+# Misc local / temp
+# =============================================================================
+*.local
+*.bak
+*.tmp
+.cache/
+coverage/
+.nyc_output/
+
+# Office / accidental local files
+~$*
+*.docx
+*.doc
+*.xlsx

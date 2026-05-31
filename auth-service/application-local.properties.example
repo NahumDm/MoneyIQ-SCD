@@ -1,0 +1,8 @@
+# Copy to application-local.properties for local secrets (gitignored).
+# Or set the same values as environment variables.
+
+# spring.data.mongodb.uri=mongodb://localhost:27017/auth_db
+# jwt.secret=your-long-random-secret
+# spring.mail.username=your@gmail.com
+# spring.mail.password=your-app-password
+# verification.strategy=otp
