@@ -1,6 +1,12 @@
-# Personal Expense Management System
+# Personal Expense Management System (MoneyIQ-SCD)
 
-A contract-first, microservice-based Personal Expense Management System demonstrating **Clean Architecture**, **service isolation**, and **GoF design patterns** across four independently deployable services.
+A contract-first, microservice-based Personal Expense Management System demonstrating **Clean Architecture**, **service isolation**, and **GoF design patterns** across four backend services plus a React frontend.
+
+**For teachers / reviewers**
+
+- **[DESIGN_PATTERNS.md](DESIGN_PATTERNS.md)** — What each GoF pattern is, why it was chosen, and how it works in this codebase.
+- **Source comments** — Each module file documents classes, interfaces, and methods (what / why / how).
+- **This README** — How to run the system and every HTTP endpoint.
 
 ## Architecture Overview
 
@@ -40,19 +46,19 @@ A contract-first, microservice-based Personal Expense Management System demonstr
 
 ## GoF Design Patterns & OOP Compliance
 
-Every module is fully object-oriented (encapsulation, abstraction, inheritance, polymorphism where applicable) and implements exactly one GoF pattern with documented reason in source comments.
+Each backend module implements **exactly one** GoF pattern. Full explanations (what / why / how) are in **[DESIGN_PATTERNS.md](DESIGN_PATTERNS.md)** and in multi-line comments inside each source file.
 
-| # | Module | Pattern (GoF) | File | Reason |
-|---|--------|---------------|------|--------|
-| 1 | Database | **Singleton** (Creational) | `DatabaseModule.java` | One shared MongoDB client avoids duplicate connections and resource waste |
-| 2 | Registration | **Builder** (Creational) | `RegistrationModule.java` | Dynamic user fields without telescoping constructors |
-| 3 | Verification | **Strategy** (Behavioral) | `VerificationModule.java` | OTP vs link algorithms swappable at runtime via config |
-| 4 | Login | **Chain of Responsibility** (Behavioral) | `LoginModule.java` | Sequential validation steps decoupled into independent handlers |
-| 5 | Auth Facade | **Facade** (Structural) | `AuthenticationFacadeModule.java` | Single unified interface over register / verify / login subsystems |
-| 6 | Auth Main | **Adapter** (Structural) | `Main.java` | Adapts HTTP/REST requests to the facade's domain interface |
-| 7 | Expense | **Strategy** (Behavioral) | `ExpenseModule.py` | Date, amount, category filters as interchangeable query strategies |
-| 8 | PDF | **Factory Method** (Creational) | `PdfModule.js` | Creates renderer implementations without coupling callers to Puppeteer |
-| 9 | Integration | **Proxy** (Structural) | `IntegrationModule.ts` | Surrogate gateway controlling access, auth validation, and header injection |
+| # | Module | Pattern (GoF) | File |
+|---|--------|---------------|------|
+| 1 | Database | **Singleton** (Creational) | `auth-service/src/auth/DatabaseModule.java` |
+| 2 | Registration | **Builder** (Creational) | `auth-service/src/auth/RegistrationModule.java` |
+| 3 | Verification | **Strategy** (Behavioral) | `auth-service/src/auth/VerificationModule.java` |
+| 4 | Login | **Chain of Responsibility** (Behavioral) | `auth-service/src/auth/LoginModule.java` |
+| 5 | Auth Facade | **Facade** (Structural) | `auth-service/src/auth/AuthenticationFacadeModule.java` |
+| 6 | Auth Main | **Adapter** (Structural) | `auth-service/src/auth/Main.java` |
+| 7 | Expense | **Strategy** (Behavioral) | `expense-service/src/ExpenseModule.py` |
+| 8 | PDF | **Factory Method** (Creational) | `pdf-service/src/PdfModule.js` |
+| 9 | Integration | **Proxy** (Structural) | `integration-layer/src/IntegrationModule.ts` |
 
 ---
 
@@ -103,23 +109,16 @@ VERIFICATION_STRATEGY=otp   # or "link"
 
 **Terminal 1 — Auth Service (port 8081)**
 
-```bash
+```powershell
 cd auth-service
-mvn spring-boot:run
+.\run-auth.ps1
 ```
 
 **Terminal 2 — Expense Service (port 8082)**
 
-```bash
+```powershell
 cd expense-service
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
-
-pip install -r requirements.txt
-python run.py
+.\run-expense.ps1
 ```
 
 **Terminal 3 — PDF Service (port 8083)**
@@ -152,12 +151,30 @@ curl http://localhost:8083/health
 
 ## API Reference
 
-> **Gateway base URL:** `http://localhost:8080`  
-> All client requests should go through the Integration Layer unless testing a service directly.
+> **Gateway base URL (use for UI and curl):** `http://localhost:8080`  
+> **Frontend (dev):** `http://localhost:5173` — Vite proxies `/api` → gateway.
+
+| Service | Direct URL (testing only) | Port |
+|---------|---------------------------|------|
+| Integration gateway | `http://localhost:8080` | 8080 |
+| Auth | `http://localhost:8081` | 8081 |
+| Expense | `http://localhost:8082` | 8082 |
+| PDF | `http://localhost:8083` | 8083 |
+
+### Health checks
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/health` | No | Gateway status + upstream URLs |
+| GET | `http://localhost:8081/health` | No | Auth service |
+| GET | `http://localhost:8082/health` | No | Expense service |
+| GET | `http://localhost:8083/health` | No | PDF service |
 
 ---
 
-### Auth Service Endpoints
+### Auth endpoints (via gateway)
+
+All paths below are relative to `http://localhost:8080`.
 
 #### POST `/api/auth/register`
 
@@ -298,9 +315,9 @@ Validate a JWT and return the authenticated user. Used by the integration layer 
 
 ---
 
-### Expense Service Endpoints
+### Expense endpoints (via gateway — JWT required)
 
-Expense endpoints require a valid JWT **when called through the integration layer** (`http://localhost:8080`). The gateway validates the token with auth-service and forwards `X-User-Id` to the expense service. Direct calls to expense-service (port 8082) must include `X-User-Id` manually for testing.
+The gateway validates `Authorization: Bearer <token>` with auth-service, then forwards `X-User-Id` to expense-service. Direct calls to port **8082** must include header `X-User-Id` manually (testing only).
 
 ```
 Authorization: Bearer <token>   # via integration layer only
@@ -433,7 +450,7 @@ curl -X DELETE http://localhost:8080/api/expenses/665f1a2b3c4d5e6f7a8b9c0e \
 
 ---
 
-### PDF Service Endpoints
+### PDF endpoints (via gateway)
 
 #### POST `/api/pdf/generate`
 
@@ -508,29 +525,15 @@ curl -X POST http://localhost:8080/api/pdf/generate \
 ## Service Directory Structure
 
 ```
-SCD/
-├── auth-service/          # Spring Boot — 6 flat source files
-│   ├── src/
-│   │   ├── Main.java                      # Entry point + REST API
-│   │   ├── DatabaseModule.java            # Module 1: Singleton
-│   │   ├── RegistrationModule.java        # Module 2: Builder
-│   │   ├── VerificationModule.java        # Module 3: Strategy
-│   │   ├── LoginModule.java               # Module 4: Chain of Responsibility
-│   │   ├── AuthenticationFacadeModule.java # Module 5: Facade
-│   │   └── application.properties
-│   └── target/            # Compiled object code (Maven output)
-├── expense-service/       # FastAPI — single module
-│   └── src/
-│       └── ExpenseModule.py   # Strategy pattern for filtering
-├── pdf-service/           # Express.js — single module
-│   └── src/
-│       └── PdfModule.js       # Factory Method pattern
-├── integration-layer/     # TypeScript gateway
-│   └── src/
-│       ├── IntegrationModule.ts  # Proxy pattern
-│       └── index.ts
-├── frontend/              # React UI
-└── README.md
+MoneyIQ-SCD/
+├── auth-service/src/auth/     # 6 Java modules + AppConfig (GoF patterns 1–6)
+├── expense-service/src/       # ExpenseModule.py (Strategy)
+├── pdf-service/src/           # PdfModule.js (Factory Method)
+├── integration-layer/src/     # IntegrationModule.ts (Proxy)
+├── frontend/                  # React UI (port 5173)
+├── DESIGN_PATTERNS.md         # Pattern theory for presentation
+├── README.md                  # This file — endpoints & run guide
+└── start-all.ps1              # Start all services (Windows)
 ```
 
 ---

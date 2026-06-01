@@ -35,12 +35,22 @@ export interface AuthenticatedRequest extends Request {
   user?: AuthenticatedUser;
 }
 
+/**
+ * What: Controlled forwarder to an upstream microservice with optional header injection.
+ * Why: Clients talk only to the gateway; proxy enforces path rewrite and trusted headers.
+ * How: Wraps http-proxy-middleware with target URL, pathRewrite, and proxyReq hooks.
+ */
 export class ServiceProxy {
   constructor(
     private readonly target: ServiceTarget,
     private readonly getExtraHeaders?: (req: Request) => Record<string, string>
   ) {}
 
+  /**
+   * What: Returns Express middleware that proxies requests to the configured upstream.
+   * Why: IntegrationModule mounts one proxy per service prefix.
+   * How: Sets changeOrigin, rewrites path to pathPrefix, forwards Authorization and getExtraHeaders on proxyReq.
+   */
   createMiddleware(): RequestHandler {
     const options: Options = {
       target: this.target.baseUrl,
@@ -99,6 +109,11 @@ export class IntegrationModule {
     this._configure();
   }
 
+  /**
+   * What: Bearer-token gate that validates JWT via auth-service before expense routes run.
+   * Why: Expense service trusts X-User-Id only from this layer after token verification.
+   * How: OPTIONS passes through; otherwise calls auth /api/auth/validate and attaches user to req.
+   */
   private _createAuthMiddleware(): RequestHandler {
     return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       if (req.method === 'OPTIONS') {
@@ -127,6 +142,11 @@ export class IntegrationModule {
     };
   }
 
+  /**
+   * What: Wires CORS, health, public proxies (auth, pdf), and authenticated expense proxy.
+   * Why: Single place defines gateway topology and which routes require validation.
+   * How: Skips express.json for body preservation; mounts ServiceProxy per pathPrefix; expense chain adds auth + X-User-Id headers.
+   */
   private _configure(): void {
     // Do not use express.json() here — it consumes the request body before the proxy
     // forwards it, which causes auth/expense to fail with HttpMessageNotReadableException.
@@ -200,6 +220,11 @@ export class IntegrationModule {
     });
   }
 
+  /**
+   * What: Starts the integration gateway HTTP listener.
+   * Why: Entry point for the Node process hosting the facade.
+   * How: Listens on constructor port and logs readiness.
+   */
   start(): void {
     this.app.listen(this.port, () => {
       console.log(`Integration layer listening on port ${this.port}`);

@@ -38,6 +38,11 @@ public class RegistrationModule {
         this.verificationModule = verificationModule;
     }
 
+    /**
+     * What: Creates a new user from a flexible field map and triggers email verification.
+     * Why: HTTP controllers can pass arbitrary registration fields without knowing builder steps or password hashing.
+     * How: Validates email uniqueness, maps known keys through {@link UserRegistrationBuilder}, saves twice (before/after verification fields are set).
+     */
     public User register(Map<String, String> fields) {
         String email = fields.getOrDefault("email", "").trim().toLowerCase();
         if (email.isBlank()) {
@@ -66,6 +71,11 @@ public class RegistrationModule {
     }
 }
 
+/**
+ * What: Step-by-step assembler for a {@link User} before first persistence.
+ * Why: Registration has required fields (email, password) plus optional metadata without telescoping constructors.
+ * How: Fluent {@code with*} methods accumulate state; {@link #build()} validates and produces an unverified user with timestamps.
+ */
 class UserRegistrationBuilder {
 
     private String email;
@@ -74,31 +84,41 @@ class UserRegistrationBuilder {
     private final Map<String, String> metadata = new HashMap<>();
     private PasswordEncoder passwordEncoder;
 
+    /** What: Sets normalized email. Why: Required identity for login and verification. How: Stores trimmed value for {@link #build()}. */
     UserRegistrationBuilder withEmail(String email) {
         this.email = email;
         return this;
     }
 
+    /** What: Sets plaintext password pending hash. Why: Hashing happens at build time via encoder. How: Retains raw password until {@link #build()}. */
     UserRegistrationBuilder withPassword(String rawPassword) {
         this.rawPassword = rawPassword;
         return this;
     }
 
+    /** What: Sets display name. Why: Optional; defaults to local-part of email if omitted at build. How: Stores name for {@link #build()}. */
     UserRegistrationBuilder withName(String name) {
         this.name = name;
         return this;
     }
 
+    /** What: Adds arbitrary metadata key/value. Why: Extensible profile without changing the User schema. How: Puts entry into internal metadata map. */
     UserRegistrationBuilder withField(String key, String value) {
         this.metadata.put(key, value);
         return this;
     }
 
+    /** What: Supplies the encoder used to hash the password. Why: Build must not hard-code crypto. How: Injected by {@link RegistrationModule#register}. */
     UserRegistrationBuilder withPasswordEncoder(PasswordEncoder encoder) {
         this.passwordEncoder = encoder;
         return this;
     }
 
+    /**
+     * What: Materializes a new {@link User} with hashed password and default name if needed.
+     * Why: Enforces required fields in one place before the entity is saved.
+     * How: Throws if email/password/encoder missing; sets verified=false, copies metadata, stamps created/updated times.
+     */
     User build() {
         if (email == null || email.isBlank()) {
             throw new IllegalStateException("Email is required");

@@ -51,6 +51,11 @@ public class LoginModule {
         this.jwtExpirationMs = jwtExpirationMs;
     }
 
+    /**
+     * What: Authenticates credentials and returns a signed JWT plus a minimal user profile.
+     * Why: Single entry point for login that enforces existence, verification, and password checks before issuing a token.
+     * How: Runs the handler chain on {@link LoginRequest}, then builds JWT with subject id and email/name claims.
+     */
     public Map<String, Object> login(String email, String password) {
         LoginRequest request = new LoginRequest(email, password);
         User user = loginChain.handle(request);
@@ -76,6 +81,11 @@ public class LoginModule {
         return response;
     }
 
+    /**
+     * What: Parses and validates a JWT, returning embedded user claims for gateways or resource servers.
+     * Why: Lets the integration layer confirm tokens without re-running the login chain.
+     * How: Verifies HMAC signature with configured secret; maps subject and claims to id/email/name map.
+     */
     public Map<String, Object> validateToken(String token) {
         try {
             SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
@@ -96,15 +106,26 @@ public class LoginModule {
     }
 }
 
+/**
+ * What: Base link in the login validation chain.
+ * Why: Each step (existence, verified email, password) stays independent and composable.
+ * How: {@link #handle} calls {@link #process}; non-null result short-circuits success; null delegates to {@code next}.
+ */
 abstract class LoginHandler {
 
     private LoginHandler next;
 
+    /** What: Wires the next handler. Why: Builds the chain at module construction. How: Returns {@code next} for fluent chaining. */
     LoginHandler setNext(LoginHandler next) {
         this.next = next;
         return next;
     }
 
+    /**
+     * What: Runs this handler then successors until a {@link User} is returned or the chain fails.
+     * Why: Uniform entry for {@link LoginModule#login} without knowing handler order.
+     * How: If {@link #process} returns non-null user, return it; else recurse to {@code next} or throw.
+     */
     User handle(LoginRequest request) {
         User result = process(request);
         if (result != null) {
@@ -119,6 +140,7 @@ abstract class LoginHandler {
     protected abstract User process(LoginRequest request);
 }
 
+/** What: Ensures the email belongs to a registered user. Why: First gate before verification/password checks. How: Loads user into request and returns null to continue chain. */
 class UserExistenceHandler extends LoginHandler {
 
     private final UserRepository userRepository;
@@ -127,6 +149,7 @@ class UserExistenceHandler extends LoginHandler {
         this.userRepository = userRepository;
     }
 
+    /** What: Resolves user by normalized email. Why: Later handlers need the entity. How: Sets {@link LoginRequest#setUser} and passes chain forward with null. */
     @Override
     protected User process(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
@@ -136,6 +159,7 @@ class UserExistenceHandler extends LoginHandler {
     }
 }
 
+/** What: Blocks login until email is verified. Why: Unverified accounts must not receive JWTs. How: Throws if {@link User#isVerified()} is false. */
 class EmailVerificationHandler extends LoginHandler {
 
     @Override
@@ -147,6 +171,7 @@ class EmailVerificationHandler extends LoginHandler {
     }
 }
 
+/** What: Validates plaintext password against stored hash. Why: Final security check before issuing token. How: Returns user on match; throws generic error on mismatch. */
 class CredentialValidationHandler extends LoginHandler {
 
     private final PasswordEncoder passwordEncoder;
@@ -155,6 +180,7 @@ class CredentialValidationHandler extends LoginHandler {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /** What: Compares submitted password to {@link User#getPasswordHash()}. Why: Terminates chain with authenticated user. How: Uses {@link PasswordEncoder#matches}. */
     @Override
     protected User process(LoginRequest request) {
         User user = request.getUser();
@@ -165,6 +191,11 @@ class CredentialValidationHandler extends LoginHandler {
     }
 }
 
+/**
+ * What: Mutable carrier for email, password, and resolved user through the login chain.
+ * Why: Handlers share state without a growing parameter list.
+ * How: Email is normalized in the constructor; first handler attaches {@link User} for downstream steps.
+ */
 class LoginRequest {
 
     private final String email;

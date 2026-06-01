@@ -35,10 +35,20 @@ public class DatabaseModule {
 
     private final String connectionUri;
 
+    /**
+     * What: Injects the MongoDB connection URI from Spring configuration.
+     * Why: Keeps the URI out of code and allows environment-specific databases without recompilation.
+     * How: Spring resolves {@code spring.data.mongodb.uri} and passes it to the singleton holder at startup.
+     */
     public DatabaseModule(@Value("${spring.data.mongodb.uri}") String connectionUri) {
         this.connectionUri = connectionUri;
     }
 
+    /**
+     * What: Returns the shared {@link MongoClient} used for all database access in the auth service.
+     * Why: A single client reuses connection pools and avoids the cost of opening multiple clients per request.
+     * How: Double-checked locking lazily creates {@link MongoClients#create(String)} on first call, then reuses the static instance.
+     */
     public MongoClient getClient() {
         if (mongoClient == null) {
             synchronized (LOCK) {
@@ -51,6 +61,11 @@ public class DatabaseModule {
     }
 }
 
+/**
+ * What: MongoDB document model for a registered auth user (credentials, verification state, metadata).
+ * Why: Centralizes persistence shape so repositories and modules share one typed entity instead of raw maps.
+ * How: Spring Data maps fields to the {@code users} collection; getters/setters support repository save/load cycles.
+ */
 @Document(collection = "users")
 class User {
 
@@ -91,6 +106,11 @@ class User {
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }
 
+/**
+ * What: Spring Data repository for {@link User} CRUD and auth-specific lookups.
+ * Why: Declarative queries keep persistence out of business modules (registration, verification, login).
+ * How: Extends {@link MongoRepository}; derived method names map to MongoDB queries on email and verification token.
+ */
 interface UserRepository extends MongoRepository<User, String> {
     Optional<User> findByEmail(String email);
     Optional<User> findByVerificationToken(String token);

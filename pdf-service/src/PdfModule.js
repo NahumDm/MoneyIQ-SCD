@@ -17,6 +17,11 @@
 
 const express = require('express');
 
+/**
+ * What: Abstract renderer that converts HTML into a PDF buffer.
+ * Why: HTTP layer and factory depend on a stable contract, not a specific engine.
+ * How: Subclasses override render(); base throws if called directly.
+ */
 class PdfRenderer {
   async render(_html, _options = {}) {
     throw new Error('render() must be implemented by subclass');
@@ -24,6 +29,11 @@ class PdfRenderer {
 }
 
 class PuppeteerPdfRenderer extends PdfRenderer {
+  /**
+   * What: Renders HTML to PDF using headless Chromium via Puppeteer.
+   * Why: Factory-selected default engine for faithful CSS/layout in PDF output.
+   * How: Launches browser, sets page content (networkidle0), calls page.pdf with format/margins, closes browser in finally.
+   */
   async render(html, options = {}) {
     const puppeteer = require('puppeteer');
     const browser = await puppeteer.launch({
@@ -46,6 +56,11 @@ class PuppeteerPdfRenderer extends PdfRenderer {
 }
 
 class PdfRendererFactory {
+  /**
+   * What: Instantiates a concrete PdfRenderer by type name.
+   * Why: Callers request PDF generation without importing Puppeteer directly.
+   * How: Switch on type; currently only 'puppeteer' is supported.
+   */
   static create(type = 'puppeteer') {
     switch (type) {
       case 'puppeteer':
@@ -56,7 +71,17 @@ class PdfRendererFactory {
   }
 }
 
+/**
+ * What: Express application wiring PDF generation HTTP API to a renderer from the factory.
+ * Why: Single module owns port, middleware, routes, and renderer selection via env.
+ * How: Parses JSON/HTML bodies, delegates render to factory, streams PDF response.
+ */
 class PdfModule {
+  /**
+   * What: Builds the PDF microservice app and route table.
+   * Why: Encapsulates startup configuration (port, renderer type).
+   * How: Stores port and PDF_RENDERER env, registers middleware and routes.
+   */
   constructor(port = process.env.PORT || 8083) {
     this._port = port;
     this._rendererType = process.env.PDF_RENDERER || 'puppeteer';
@@ -65,11 +90,13 @@ class PdfModule {
     this._configureRoutes();
   }
 
+  /** What: Registers body parsers for JSON and raw HTML. Why: Clients may POST JSON or HTML text. How: express.json and express.text limits. */
   _configureMiddleware() {
     this.app.use(express.json({ limit: '5mb' }));
     this.app.use(express.text({ type: 'text/html', limit: '5mb' }));
   }
 
+  /** What: Normalizes request body to { html, options }. Why: Single shape for render(). How: Detects raw HTML string or { html, options } object. */
   _parseRequestBody(body) {
     if (typeof body === 'string' && body.trim().startsWith('<')) {
       return { html: body, options: {} };
@@ -80,6 +107,7 @@ class PdfModule {
     return null;
   }
 
+  /** What: Mounts /health and POST /api/pdf/generate. Why: Public API surface. How: Factory create, render, set PDF headers or 4xx/5xx JSON errors. */
   _configureRoutes() {
     this.app.get('/health', (_req, res) => {
       res.json({ status: 'ok', service: 'pdf-service' });
@@ -108,6 +136,7 @@ class PdfModule {
     });
   }
 
+  /** What: Binds HTTP server on configured port. Why: Process entry when module is loaded directly. How: app.listen and log port. */
   start() {
     this.app.listen(this._port, () => {
       console.log(`PDF service listening on port ${this._port}`);
