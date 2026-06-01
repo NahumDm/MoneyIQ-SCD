@@ -46,7 +46,9 @@ export class ServiceProxy {
       target: this.target.baseUrl,
       changeOrigin: true,
       pathRewrite: (path: string) => {
-        const suffix = path.startsWith('/') ? path : `/${path}`;
+        // Mounted at pathPrefix; req path is often "/" — avoid "/api/expenses/" (307 redirect).
+        const suffix =
+          !path || path === '/' ? '' : path.startsWith('/') ? path : `/${path}`;
         return `${this.target.pathPrefix}${suffix}`;
       },
       on: {
@@ -99,6 +101,10 @@ export class IntegrationModule {
 
   private _createAuthMiddleware(): RequestHandler {
     return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      if (req.method === 'OPTIONS') {
+        return next();
+      }
+
       const authHeader = req.headers.authorization;
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Authorization header with Bearer token required' });
@@ -122,7 +128,30 @@ export class IntegrationModule {
   }
 
   private _configure(): void {
-    this.app.use(express.json({ limit: '5mb' }));
+    // Do not use express.json() here — it consumes the request body before the proxy
+    // forwards it, which causes auth/expense to fail with HttpMessageNotReadableException.
+
+    this.app.use((req: Request, res: Response, next: NextFunction) => {
+      const origin = req.headers.origin;
+      if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+      } else {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+      }
+      res.setHeader(
+        'Access-Control-Allow-Methods',
+        'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+      );
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization, X-User-Id, X-User-Email'
+      );
+      if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+      }
+      next();
+    });
 
     this.app.get('/health', (_req: Request, res: Response) => {
       res.json({

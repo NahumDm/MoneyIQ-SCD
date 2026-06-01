@@ -288,6 +288,7 @@ class ExpenseModule:
             title="Ledger / Expense Service",
             description="Personal expense management microservice",
             version="1.0.0",
+            redirect_slashes=False,
         )
         service = self._service
 

@@ -1,6 +1,7 @@
 package auth;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
@@ -106,9 +107,18 @@ class OtpVerificationStrategy implements VerificationStrategy {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromAddress);
             message.setTo(user.getEmail());
-            message.setSubject("Verify your account - OTP");
-            message.setText("Your verification OTP is: " + otp + "\nIt expires in 15 minutes.");
-            mailSender.send(message);
+            message.setSubject("Verify your MoneyIQ account");
+            message.setText(
+                    "Your verification code is: " + otp + "\n\n"
+                            + "It expires in 15 minutes.\n\n"
+                            + "If you did not create an account, ignore this email.");
+            try {
+                mailSender.send(message);
+                System.out.println("[MAIL] OTP sent to " + user.getEmail());
+            } catch (MailException ex) {
+                System.err.println("[MAIL] Send failed (" + ex.getMessage() + ")");
+                System.out.println("[DEV] Verification OTP for " + user.getEmail() + ": " + otp);
+            }
         } else {
             System.out.println("[DEV] Verification OTP for " + user.getEmail() + ": " + otp);
         }
@@ -156,7 +166,13 @@ class LinkVerificationStrategy implements VerificationStrategy {
             message.setTo(user.getEmail());
             message.setSubject("Verify your account");
             message.setText("Click to verify your account:\n" + link);
-            mailSender.send(message);
+            try {
+                mailSender.send(message);
+                System.out.println("[MAIL] Verification link sent to " + user.getEmail());
+            } catch (MailException ex) {
+                System.err.println("[MAIL] Send failed (" + ex.getMessage() + ")");
+                System.out.println("[DEV] Verification link for " + user.getEmail() + ": " + link);
+            }
         } else {
             System.out.println("[DEV] Verification link for " + user.getEmail() + ": " + link);
         }
