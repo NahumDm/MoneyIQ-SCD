@@ -4,6 +4,7 @@ A contract-first, microservice-based Personal Expense Management System demonstr
 
 **For teachers / reviewers**
 
+- **[TECHNICAL_SPECIFICATION.md](TECHNICAL_SPECIFICATION.md)** — Full technical document: requirements, architecture, UML (component, class, sequence), provided/required interfaces, every endpoint with examples, implementation (use for PowerPoint).
 - **[DESIGN_PATTERNS.md](DESIGN_PATTERNS.md)** — What each GoF pattern is, why it was chosen, and how it works in this codebase.
 - **Source comments** — Each module file documents classes, interfaces, and methods (what / why / how).
 - **This README** — How to run the system and every HTTP endpoint.
