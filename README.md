@@ -47,19 +47,24 @@ A contract-first, microservice-based Personal Expense Management System demonstr
 
 ## GoF Design Patterns & OOP Compliance
 
-Each backend module implements **exactly one** GoF pattern. Full explanations (what / why / how) are in **[DESIGN_PATTERNS.md](DESIGN_PATTERNS.md)** and in multi-line comments inside each source file.
+Each core backend module maps to a GoF pattern with inline source comments (`what / why / how`).
+For the expanded technical rationale and UML, see [TECHNICAL_SPECIFICATION.md](TECHNICAL_SPECIFICATION.md)
+and [DESIGN_PATTERNS.md](DESIGN_PATTERNS.md).
 
-| # | Module | Pattern (GoF) | File |
-|---|--------|---------------|------|
-| 1 | Database | **Singleton** (Creational) | `auth-service/src/auth/DatabaseModule.java` |
-| 2 | Registration | **Builder** (Creational) | `auth-service/src/auth/RegistrationModule.java` |
-| 3 | Verification | **Strategy** (Behavioral) | `auth-service/src/auth/VerificationModule.java` |
-| 4 | Login | **Chain of Responsibility** (Behavioral) | `auth-service/src/auth/LoginModule.java` |
-| 5 | Auth Facade | **Facade** (Structural) | `auth-service/src/auth/AuthenticationFacadeModule.java` |
-| 6 | Auth Main | **Adapter** (Structural) | `auth-service/src/auth/Main.java` |
-| 7 | Expense | **Strategy** (Behavioral) | `expense-service/src/ExpenseModule.py` |
-| 8 | PDF | **Factory Method** (Creational) | `pdf-service/src/PdfModule.js` |
-| 9 | Integration | **Proxy** (Structural) | `integration-layer/src/IntegrationModule.ts` |
+| # | Service | Module | Pattern (GoF) | File |
+|---|---------|--------|---------------|------|
+| 1 | Auth | Database | **Singleton** (Creational) | `auth-service/src/auth/DatabaseModule.java` |
+| 2 | Auth | Registration | **Builder** (Creational) | `auth-service/src/auth/RegistrationModule.java` |
+| 3 | Auth | Verification | **Strategy** (Behavioral) | `auth-service/src/auth/VerificationModule.java` |
+| 4 | Auth | Login | **Chain of Responsibility** (Behavioral) | `auth-service/src/auth/LoginModule.java` |
+| 5 | Auth | Auth Facade | **Facade** (Structural) | `auth-service/src/auth/AuthenticationFacadeModule.java` |
+| 6 | Auth | HTTP Adapter | **Adapter** (Structural) | `auth-service/src/auth/Main.java` |
+| 7 | Expense | DB Connection | **Singleton** (Creational) | `expense-service/src/expense_db_singleton.py` |
+| 8 | Expense | Filtering | **Strategy** (Behavioral) | `expense-service/src/expense_filter.py` |
+| 9 | Expense | CRUD Adapter | **Adapter** (Structural) | `expense-service/src/expense_crud.py` |
+| 10 | Expense | API Facade / Entry | **Facade** (Structural) | `expense-service/src/expense_entry.py` |
+| 11 | PDF | Renderer Factory | **Factory Method** (Creational) | `pdf-service/src/PdfModule.js` |
+| 12 | Integration | Gateway Proxy | **Proxy** (Structural) | `integration-layer/src/IntegrationModule.ts` |
 
 ---
 
@@ -106,7 +111,7 @@ GMAIL_APP_PASSWORD=your-app-password
 VERIFICATION_STRATEGY=otp   # or "link"
 ```
 
-### Step 3 — Start Each Service (4 terminals)
+### Step 3 — Start Each Service (5 terminals)
 
 **Terminal 1 — Auth Service (port 8081)**
 
@@ -137,6 +142,14 @@ cd integration-layer
 npm install
 npm run build
 npm start
+```
+
+**Terminal 5 — Frontend UI (port 5173)**
+
+```powershell
+cd frontend
+npm install
+npm run dev
 ```
 
 ### Step 4 — Verify All Services
@@ -528,7 +541,12 @@ curl -X POST http://localhost:8080/api/pdf/generate \
 ```
 MoneyIQ-SCD/
 ├── auth-service/src/auth/     # 6 Java modules + AppConfig (GoF patterns 1–6)
-├── expense-service/src/       # ExpenseModule.py (Strategy)
+├── expense-service/src/
+│   ├── ExpenseModule.py       # Composition root (exports app, settings)
+│   ├── expense_db_singleton.py # Singleton (Mongo connection + Settings)
+│   ├── expense_filter.py      # Strategy (query filters)
+│   ├── expense_crud.py        # Adapter (CRUD interface + Mongo adapter)
+│   └── expense_entry.py       # Facade (route wiring + orchestration)
 ├── pdf-service/src/           # PdfModule.js (Factory Method)
 ├── integration-layer/src/     # IntegrationModule.ts (Proxy)
 ├── frontend/                  # React UI (port 5173)
