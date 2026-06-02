@@ -14,10 +14,26 @@ export function useExpenses(initialFilters = {}) {
     try {
       const query = {};
       if (params.category) query.category = params.category;
-      if (params.min_amount) query.min_amount = params.min_amount;
-      if (params.max_amount) query.max_amount = params.max_amount;
-      if (params.start_date) query.start_date = new Date(params.start_date).toISOString();
-      if (params.end_date) query.end_date = new Date(params.end_date).toISOString();
+
+      // Keep 0 as a valid boundary value.
+      if (params.min_amount !== '' && params.min_amount !== undefined && params.min_amount !== null) {
+        query.min_amount = Number(params.min_amount);
+      }
+      if (params.max_amount !== '' && params.max_amount !== undefined && params.max_amount !== null) {
+        query.max_amount = Number(params.max_amount);
+      }
+
+      if (params.start_date) {
+        const start = new Date(params.start_date);
+        start.setHours(0, 0, 0, 0);
+        query.start_date = start.toISOString();
+      }
+      if (params.end_date) {
+        // Include the full selected day in filtering.
+        const end = new Date(params.end_date);
+        end.setHours(23, 59, 59, 999);
+        query.end_date = end.toISOString();
+      }
 
       const { data } = await expenseApi.getAll(query);
       setExpenses(data);
